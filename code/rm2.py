@@ -18,7 +18,7 @@ KMIN, KMAX = -3, 8
 THR_PROD = float(np.log(0.85))   # production at least 15% below trend
 THR_YLD = float(np.log(0.90))    # yield at least 10% below trend
 
-# ---------------------------------------------------------------- loading
+# loading
 
 def load_panel(src_filter=None):
     p = pd.read_parquet(D + 'panel_dyad.parquet')
@@ -34,7 +34,7 @@ def names():
     cw = pd.read_csv(D + 'cru_crosswalk.csv')[['code', 'cru']]
     return nm.drop(columns=[c for c in ['cru'] if c in nm.columns]).merge(cw, on='code', how='left')
 
-# ---------------------------------------------------------------- production anomalies
+# production anomalies
 
 def trend_anomaly(years, x, method='backward', window=10, minpts=7, half=7):
     """log(x_t) minus a linear trend.
@@ -74,7 +74,7 @@ def production_anomalies(method='backward'):
         res.append(g)
     return pd.concat(res)[['area', 'commod', 'year', 'prod', 'harea', 'yld', 'a_prod', 'a_yld']]
 
-# ---------------------------------------------------------------- weather-predicted yield anomalies
+# weather-predicted yield anomalies
 
 def weather_features():
     cru = pd.read_parquet(D + 'cru_monthly.parquet')
@@ -136,7 +136,7 @@ def weather_predicted_anomaly(anom, nm, countries, alpha=20.0, y0=1975):
         out.append(pd.DataFrame({'area': a, 'commod': c, 'year': yr.astype(int), 'a_yld': y, 'w_pred': pred}))
     return pd.concat(out)
 
-# ---------------------------------------------------------------- exporter shares
+# exporter shares
 
 def exporter_shares(p):
     ex = p.groupby(['exp', 'commod', 'year'], as_index=False).agg(xq=('q', 'sum'), xv=('v', 'sum'))
@@ -160,7 +160,7 @@ def significant_exporters(ex, min_share=0.02, min_q=2e5):
     full['sig'] = (full.wsh_pre >= min_share) & (full.xq_pre >= min_q)
     return full
 
-# ---------------------------------------------------------------- restrictions
+# restrictions
 
 def policy_years(kind='prohibition'):
     y = pd.read_csv(D + f'policy_years_{kind}.csv')
@@ -281,7 +281,7 @@ def build_pseudo(anom, sig, ex, shock_set, bind, y_lo=1996, y_hi=2023, calm=0.05
     return ps[['exp', 'commod', 't0', 't1', 'type', 'a_prod', 'a_yld', 'wsh_pre', 'xq_pre', 'n_prior', 'druv',
                'censor_year', 'open_end', 'cap12', 'spell_id']]
 
-# ---------------------------------------------------------------- stacked sample
+# stacked sample
 
 def stack(events, p, min_imp=2e4, min_dep=0.02, kmin=KMIN, kmax=KMAX, last_year=None, censor=True):
     """All importers of the crop with mean pre-period (t0-3..t0-1) imports >= min_imp t/yr, positive
@@ -335,7 +335,7 @@ def stack(events, p, min_imp=2e4, min_dep=0.02, kmin=KMIN, kmax=KMAX, last_year=
     S = S[S.k.between(kmin, kmax)]
     return S
 
-# ---------------------------------------------------------------- estimation
+# estimation
 
 def demean_multi(M, codes, w=None, tol=1e-9, maxit=2000):
     """Alternating projections for several fixed-effect dimensions (Gaure 2013); weighted
@@ -381,7 +381,7 @@ def fe_ols(df, ycol, xcols, fes, cl, w=None):
     V = inv @ (sc.T @ sc) @ inv * (G / (G - 1)) * ((n - 1) / max(n - k, 1))
     return b, np.sqrt(np.clip(np.diag(V), 0, None)), int(G), int(n)
 
-# ---------------------------------------------------------------- relaxation fit (model-dependent summary)
+# relaxation fit (model-dependent summary)
 
 def fit_exp(k, b):
     """b(k) = A exp(-k/tau) for k >= 0; returns tau and half-life tau*ln2."""

@@ -264,7 +264,7 @@ RECS, CURVES = [], []
 SAVE_DRAWS = {'main', 'main_onset_year_bootstrap', 'extensive_margin', 'aligned_on_supply_restoration', 'crop_year_fe',
               'importer_crop_year_fe', 'onset_aligned'}
 
-# ------------------------------------------------------------------ 1. main build and descriptives
+#1. main build and descriptives
 ST, META = build(MAIN)
 EV, PS, EVALL = META['ev'], META['ps'], META['ev_all']
 nmap = dict(zip(NM.code, NM.name))
@@ -344,7 +344,7 @@ if os.environ.get('ONLY_ROB'):
     pd.concat(CURVES, ignore_index=True).to_csv(OUT + 'curves_extra.csv', index=False)
     sys.exit(0)
 
-# ------------------------------------------------------------------ 2. main estimates
+# 2. main estimates
 run(ST, 'main', 'main', B=B_MAIN)
 run(ST, 'main_onset_year_bootstrap', 'main', B=B_MAIN, boot_cluster='t0')
 run(ST, 'main_cluster_event', 'main', B=0, cl='eid')
@@ -371,7 +371,7 @@ obs4c = ST[(ST.ev == 0)].groupby('eid').k.max(); bal_c = set(obs4c[obs4c >= 4].i
 STB = ST[(ST.eid.isin(bal_ids) | ST.eid.isin(bal_c)) & (ST.k <= 4)].reset_index(drop=True)
 run(STB, 'balanced_cohort_k4', 'design', B=B_SUB, ks=list(range(-3, 5)))
 
-# ------------------------------------------------------------------ 3. margins and decomposition
+# 3. margins and decomposition
 run(ST, 'extensive_margin', 'margins', B=B_SUB, outcome='yext')
 run(ST, 'absent_through_k', 'margins', B=B_SUB, outcome='absent_through', ks=list(range(0, 9)), ref=None)
 run(ST, 'quantity_from_supplier', 'margins', B=B_SUB, outcome='yq')
@@ -385,7 +385,7 @@ z0 = ST[(ST.k == 0) & (ST.trade == 0)][['eid', 'imp']]
 STR = ST.merge(z0, on=['eid', 'imp'])
 run(STR, 'reentry_after_zero_k0', 'margins', B=B_SUB, outcome='trade', ks=list(range(1, 9)), ref=None)
 
-# ------------------------------------------------------------------ 4. supplier side
+# 4. supplier side
 def supplier_panel(df, flag):
     rows = []
     Xs = XTOT.set_index(['exp', 'commod', 'year']).X; Ws = WTOT.set_index(['commod', 'year']).W
@@ -451,7 +451,7 @@ STA = finish(pd.concat([SA.assign(ev=1.0), SAP.assign(ev=0.0)], ignore_index=Tru
 both = STA.groupby('jc').ev.agg(['min', 'max']); STA = STA[STA.jc.isin(both[(both['min'] == 0) & (both['max'] == 1)].index)].reset_index(drop=True)
 run(STA, 'aligned_on_supply_restoration', 'availability', B=B_SUB)
 
-# ------------------------------------------------------------------ 5. heterogeneity
+# 5. heterogeneity
 ST['n_prior_ev'] = ST.eid.map(EV.set_index('eid').n_prior).fillna(0)
 ST['w_pred'] = ST.eid.map(EV.set_index('eid').w_pred)
 evt = ST[ST.ev == 1]; pst = ST[ST.ev == 0]
@@ -495,7 +495,7 @@ for f, lab, lev in [('repeat', 'repeat_vs_first', 'event'), ('restr', 'restricti
     it += interaction_test(ST, f, lab, lev)
 pd.DataFrame(it).to_csv(OUT + 'interaction_tests.csv', index=False)
 
-# ------------------------------------------------------------------ 6. price descriptives (not causal)
+# 6. price descriptives (not causal)
 run(ST, 'descriptive_supplier_price_adjusted', 'price', B=B_SUB, controls=('druvj',))
 ST['logx_rel'] = np.log((ST.X.fillna(0) + 1e3) / (ST.eid.map(ST[ST.k < 0].groupby('eid').X.mean()).fillna(0) + 1e3))
 run(ST, 'descriptive_export_volume_adjusted', 'price', B=B_SUB, controls=('logx_rel',))
@@ -547,7 +547,7 @@ SPL.to_csv(OUT + 'spillover_panel.csv', index=False)
 if len(SPL) and SPL.ev.sum() > 0:
     run(SPL, 'same_supplier_other_crops', 'spillover', B=B_SUB)
 
-# ------------------------------------------------------------------ 7. HHI falsification
+# 7. HHI falsification
 HH = P_ALL.assign(s2=P_ALL.s ** 2).groupby(['imp', 'commod', 'year']).s2.sum()
 pre_share = EX.set_index(['exp', 'commod', 'year']).wsh
 base = ST[['eid', 'imp', 'exp', 'commod', 'k', 'year', 't0', 'ev', 'jc', 'jck', 'bink']].copy()
@@ -571,7 +571,7 @@ oth['yhhi'] = ([HH.get((i, c, y), np.nan) for i, c, y in zip(oth.imp, oth.c2, ot
 for lab, d in [('hhi_own_crop', base), ('hhi_unrelated_crop', oth)]:
     run(d.dropna(subset=['yhhi']).reset_index(drop=True), lab, 'hhi', B=0, outcome='yhhi')
 
-# ------------------------------------------------------------------ 8. recurrence of disruptions
+# 8. recurrence of disruptions
 SIGM = rc.significant_exporters(EX, 0.02, 2e5)
 pairs = SIGM[SIGM.sig][['exp', 'commod']].drop_duplicates()
 A = ANOM['backward']; sh = A[(A.a_prod <= rc.THR_PROD) & (A.a_yld <= rc.THR_YLD)]
@@ -592,7 +592,7 @@ desc['recurrence_km_median_years'] = float(med) if np.isfinite(med) else None
 desc['recurrence_S'] = {str(k): float(v) for k, v in Sk.items() if k <= 15}
 desc['recurrence_n_episodes'] = len(durs)
 
-# ------------------------------------------------------------------ 9. robustness grid (window means with bootstrap intervals)
+# 9. robustness grid (window means with bootstrap intervals)
 ROB = [
     ('anomaly_two_sided', dict(anom='twosided')),
     ('thr_prod20_yld15', dict(thr_prod=float(np.log(0.80)), thr_yld=float(np.log(0.85)))),
@@ -648,7 +648,7 @@ if not os.environ.get('SKIP_ROBUST'):
         cv, _, _, _, _, _ = estimate(d); w_ = windows(cv); loo.append({'drop': 'onset_year', 'unit': int(t), **w_})
     pd.DataFrame(loo).to_csv(OUT + 'leave_one_out.csv', index=False)
 
-# ------------------------------------------------------------------ 10. Egypt wheat case
+# 10. Egypt wheat case
 eg = P_ALL[(P_ALL.imp == 59) & (P_ALL.commod == 'wheat')].copy()
 eg['name'] = eg.exp.map(nmap)
 eg[['year', 'exp', 'name', 'q', 's', 'src']].to_csv(OUT + 'egypt_wheat.csv', index=False)
